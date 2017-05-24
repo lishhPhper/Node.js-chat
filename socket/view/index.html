@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>瞎几把聊天室</title>
+	<script src='./jquery.js'></script>
+	<script src='./layer.js'></script>
+	<link rel="stylesheet" href="./layer.css">
+	<style>
+		*{
+			margin:0px;
+			padding:0px;
+			box-sizing: border-box;
+			outline: none;
+		}
+		.im{
+			position: absolute;
+			left: 100px;
+			float:left;
+		}
+		#show{
+			width:600px;
+			height:300px;
+			border:1px solid #999;
+			overflow-y: scroll;
+			overflow-x:hidden; 
+			margin-top:30px;
+			margin-bottom:20px;
+			padding:15px;
+		}
+		div.inp{
+			width:600px;
+		}
+		div.inp input{
+			width:515px;
+			height:40px;
+		}
+		ul li{
+			list-style: none;
+			margin:10px 0px;
+			min-height:50px;
+		}
+		div.name{
+			float:left;
+			font-size:14px;
+			height:40px;
+			text-align: center;
+			color:#ff6700;
+			font-weight: 600;
+		}
+		div.time{
+			font-size:12px;
+			margin-left:230px;
+		}
+		div.chat{
+			float:left;
+			font-size:13px;
+			color:#666;
+			background:#f5f5f5;
+			padding:10px;
+			border-radius: 5px;
+			margin-left: 10px;
+			word-wrap:break-word;
+			letter-spacing: 1px;
+		}
+		span.join{
+			font-size:13px;
+			color:#666;
+			background:#f5f5f5;
+			margin-left:40%;
+			padding:5px;
+			border-radius: 15px;
+		}
+		button.send{
+			width:80px;
+			height:40px;
+		}
+		span{
+			display:inline-block;
+		}
+		span.title{
+			width:100%;
+			text-align: center;
+			position: fixed;
+		}
+		div.borad{
+			width:350px;
+			float:right;
+			border:1px solid #f5f5f5;
+		}
+		div.borad span.avtor img{
+			width:80px;
+			height:80px;
+			border-radius: 50%;
+		}
+	</style>
+</head>
+<body>
+	
+	<div class='im'>
+		<div id='show'>
+			<ul>
+			</ul>
+		</div>
+		<div class='inp'>
+			<input type="text" name="chat" placeholder="输入聊天内容">
+			<button class='send'>发送</button>
+		</div>
+	</div>
+	<div class='borad'>
+		<div class='head'>
+			<span class='avtor'>
+				<img src='http://39.108.110.178/www/1.jpg'>
+			</span>
+			<span class='name'></span>
+			<span class='desc'></span>
+		</div>
+		<div class='cont'>
+		</div>
+		<button class='logout'>注销</button>
+	</div>
+	
+
+	<!-- 加载socket.io的js文件-->
+	<script src='/socket.io/socket.io.js' ></script>
+	<script>
+	//首次进入遮罩
+	function prompt() {
+		if( getCookie('name') === null ){
+			layer.prompt({ title:'起一个好听的名字把!'},function(val, index){
+			  		layer.msg('欢迎来到聊天室!您的昵称是:'+val+' 祝你聊天愉快!');
+			 		layer.close(index);
+				socket.emit( 'join', { name : val} );
+				setCookie( 'name', val );
+			});
+		}else{
+			var name = getCookie( 'name' ); 
+			var desc = getCookie( 'desc' );
+			layer.msg('欢迎回来!' + name + ' 祝你聊天愉快!');
+			$( 'span.name' ).html( name );
+			if( desc === null ){
+				$( 'span.desc' ).html( '他很懒!还没有写签名' );
+			}else{
+				$( 'span.desc' ).html( desc );
+			}
+		}
+	}
+	prompt();
+
+	$( 'button.send' ).click( function(){
+		var ct = $( 'input[name=chat]' ).val();
+
+		$( 'input[name=chat]' ).val('');
+		var name = getCookie( 'name' );
+	 	if( ct == '' ){
+	 		layer.msg( '请输入内容!' );
+	 		layer.close();
+	 		return false;
+	 	}
+		if(name == undefined){
+			prompt(); 
+			return false;
+		}else{
+			socket.emit( 'chat', { name : name, my : ct } );
+		}
+		
+	} );
+
+	$( 'button.logout' ).click( function(){
+		delCookie( 'name' );
+		window.location.href = window.location.href;
+	} );
+
+	//当消息超过div高度是滚动条跟随消息向下移动
+	function scroll()
+	{
+		var div = $('#show')[0];
+		div.scrollTop = div.scrollHeight;
+	}
+
+	 var socket = io('http://39.108.110.178:8080');
+	 //客户端监听msg事件
+	 socket.on( 'msg', function( data ){
+	 	// console.log(data);
+	 	var li = '<li class="ct">';
+	 		li += '<div class="name">'+ data.name + '</div>' ;
+	 		li += '<div class="chat">'+ data.chat + '</div>' ;
+	 		li += '</li>';
+	 	$( 'ul' ).append( li );
+	 	scroll();
+	 } );
+	 socket.on( 'join', function( data ){
+	 	// console.log(data);
+	 	var li = '<li><span class="join">'+ data.joinchat +'</span></li>';
+	 	$( 'ul' ).append( li );
+	 	scroll();
+	 } );
+//JS操作cookies方法
+//js写cookies
+function setCookie(name,value)
+{
+	var Days = 30;
+	var exp = new Date();//js中的事件对象
+	exp.setTime(exp.getTime() + Days*24*60*60*1000);
+	document.cookie = name + "="+ value + ";expires=" + exp.toGMTString();
+	var strsec = getsec(time);
+	var exp = new Date();
+	exp.setTime(exp.getTime() + strsec*1);
+	document.cookie = name + "="+ value + ";expires=" + exp.toGMTString();
+}
+//js读取cookies
+function getCookie(name)
+{
+	var arr,reg=new RegExp("(^| )"+name+"=([^;]*)(;|$)");//RegExp 对象表示正则表达式
+	if(arr=document.cookie.match(reg))
+	return (arr[2]);
+	else
+	return null;
+}
+//js删除cookies
+function delCookie(name)
+{
+	var exp = new Date();
+	exp.setTime(exp.getTime() - 1);
+	var cval=getCookie(name);
+	if(cval!=null)
+	document.cookie= name + "="+cval+";expires="+exp.toGMTString();
+}
+	</script>
+</body>
+</html>
